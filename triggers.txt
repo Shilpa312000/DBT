@@ -1,0 +1,349 @@
+delimiter //
+create procedure displayallemp1()
+begin
+declare vfinished int default 0;
+declare vempno,vmgr,vdeptno int;
+declare vename,vjob varchar(20);
+declare vsal,vcomm float(9,2);
+declare vhiredate date;
+declare empcur cursor for select * from emp;
+declare continue handler for NOT FOUND set vfinished=1;
+open empcur;
+label1:loop
+fetch empcur into vempno,vename,vjob,vmgr,vhiredate,vsal,vcomm,vdeptno;
+if vfinished=1 then
+leave label1;
+end if;
+select vempno,vename,vjob,vmgr,vhiredate,vsal,vcomm,vdeptno;
+end loop;
+close empcur;
+end//
+delimiter ;
+
+call displayallemp1();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+select empno,ename,sal,deptno,row_number() over()
+from emp;
+
+select empno,ename,sal,deptno,row_number() over(order by sal) rn
+from emp;
+
+
+select empno,ename,sal,deptno,row_number() over(order by sal) rn,rank() over(order by sal desc) rk
+from emp;
+
+select empno,ename,sal,deptno,row_number() over(order by sal) rn,
+rank() over(order by sal desc) rk,
+dense_rank() over(order by sal desc)
+from emp;
+
+
+select empno,ename,sal,deptno,row_number() over(partition by deptno order by sal)rn
+from emp;
+
+select empno,ename,sal,deptno,row_number() over(partition by deptno order by sal desc)rn,rank() over (partition by deptno order by sal desc)rk
+from emp;
+
+
+select empno,ename,sal,deptno,row_number() over(partition by deptno order by sal desc ) rn,rank() over (partition by deptno  order by sal desc) rk,dense_rank() over (partition by deptno order by sal desc)
+drk from emp;
+
+
+select * from
+(select empno,ename,sal,deptno,row_number()
+over(partition by deptno order by sal desc)rn,
+rank() 
+over (partition by deptno order by sal desc)rk,
+dense_rank() 
+over(partition by deptno order by sal desc)drk
+from emp)e
+where e.drk=1;
+
+
+select empno,ename,sum(sal) over (partition by deptno)
+from emp;
+
+select empno,ename,lag(sal,2)over()
+from emp;
+
+select empno,ename,sal,lag(sal,2) over() lagsal,lead(sal,1) over()
+leadsal from emp;
+
+select empno,ename,sal,lag(sal,2) over (order by sal desc) lagsal,
+lead(sal,1) over(order by sal desc) leadsal,
+first_value(sal) over(order by sal desc) fv ,
+last_value(sal) over(order by sal desc) lv 
+from emp
+
+select empno,ename,sal,lag(sal,2) over() lagsal,lead(sal,1) over(),
+first_value(sal) over() fv 
+from emp;
+
+select empno,ename,sal,lag(sal,2) over (order by sal desc) lagsal,lead(sal,1) over(order by sal desc),
+first_value(sal) over(order by sal desc)fv 
+from emp;
+
+select empno,ename,sal,lag(sal,2) over (order by sal desc) lagsal,lead(sal,1) over(order by sal desc)
+leadsal,first_value(sal) over(order by sal desc) fv from emp;
+
+show triggers like 'emp';
+
+
+
+
+
+TRIGGERS
+
+create table emp_audit(
+empno int,
+oldname varchar(20),
+newname varchar(20),
+oldsal float(9,2),
+newsal float(9,2),
+oldjob varchar(20),
+newjob varchar(20),
+change1 datetime,
+action varchar(20)
+);
+
+create trigger updateemp1 before update
+on emp for each row
+insert into emp_audit values
+(old.empno,
+old.ename,new.ename,
+old.sal,new.sal,
+old.job,new.job,
+user(),now(),'update');
+
+
+
+create trigger updateemp after insert
+on emp
+for each row
+insert into emp_audit values(new.empno,null,nem.ename,null,new.sal,null,new.job,user(),now(),'insert');
+
+
+insert into emp_audit values(old.empno,old.ename,null,old.sal,null,old.job,null,user(),now(),'delete');
+
+
+
+
+
+
+create table product_audit(
+pid int,
+pname varchar(20),
+oldqty int,newqty int,
+oldprice float(9,2),newprice float(9,2),
+uname varchar(20),
+change datetime,
+action varchar(20));
+
+
+
+
+LOOPS
+
+delimiter //
+create procedure displaynumwhile(num int)
+begin
+declare str varchar(100) default'';
+declare n int default 1;
+while n<=num
+do
+set str=concat(str,n,',');
+set n=n+1;
+end while;
+set str=substr(str,1,length(str)-1);
+select str;
+end//
+delimiter ;
+
+
+delimiter //
+create procedure displaynumrepeat(num int)
+begin
+declare str varchar(100) default '';
+declare n int default 1;
+repeat
+set str=concat(str,n,'');
+set n=n+1;
+until n>num
+end repeat;
+set str=substr(str,1,length(str)-1);
+select str;
+end //
+delimiter;
+
+
+delimiter //
+create procedure displaynumloop(num int)
+begin
+declare str varchar(100) default'';
+declare n int default 1;
+label1:loop
+set str=concat(str,n,'');
+set n=n+1;
+if n>num then
+leave label1;
+end if;
+end loop;
+set str=substr(str,1,length(str)-1);
+select str;
+end //
+delimiter ;
+
+
+
+delimiter //
+create procedure updatesalemp(out ccnt int,out mcnt int,out acnt int,out other int)
+begin
+declare vfinished int default 0;
+declare vempno int;
+declare vename,vjob varchar(20);
+declare vsal,vinsal float(9,2);
+
+declare empcur for 
+select empno,ename,job,sal from emp;
+declare continue handler for NOT FOUND 
+set vfinished=1;
+set ccnt=0;
+set mcnt=0;
+set acnt=0;
+set other=0;
+open empcur ;
+
+label1:loop
+fetch empcur into vemp,vename,vjob,vsal;
+if vfinished=1 then
+leave label1;
+end if;
+
+if vjob='manager' then
+set mcnt=mcnt+1;
+set vinsal=vsal*1.1;
+update emp
+set sal=vinsal
+where empno=vempno;
+
+elseif vjob='clerk' then
+set ccnt=ccnt+1;
+set vinsal=vsal*1.2;
+update emp
+where empno=vempno;
+
+elseif vjob='analyst' then
+set accnt=accnt+1;
+set vinsal=vsal*1.25;
+update emp
+where empno=vempno;
+
+else
+set other=other+1;
+set vinsal=vsal*1.08;
+update emp
+set sal=vinsal
+where empno=vempno;
+end if;
+select vempno,vname,vjob,vsal,vinsal;
+end loop;
+close empcur;
+end //
+delimiter ;
+
+
+
+
+delimiter //
+create procedure empdata()
+begin
+declare vfinished int default 0;
+declare vempno,vdeptno int;
+declare vename,vjob,vstatus varchar(20);
+decalre vsal,vavgsal float(9,2);
+declare empcur for
+select empno,ename,job,sal,deptno,status;
+declare continue handler for NOT FOUND 
+set vfinished=1;
+
+open empcur;
+label1:loop
+fetch empcur into vempno,vename,vjob,vsal,vdeptno;
+if vfinished=1 then
+leave label1;
+end if;
+select avg(sal) into vavgsal from emp;
+where deptno=vdeptno; 
+
+if vsal<vavgsal then
+set vstatus='lesser';
+
+elseif vsal=vavgsal then
+set vstatus='equal';
+
+elseif vsal>vavgsal then
+set vstatus='greater';
+
+else
+set vstatus='error';
+end if;
+
+selec vempno,vename,vjob,vsal,vavgsal,vstatus,vdeptno;
+end loop;
+close empcur;
+end //
+delimiter ;
+
+
+delimiter //
+ CREATE PROCEDURE p (pval INT)
+BEGIN
+ DECLARE specialty CONDITION FOR SQLSTATE '45000';
+IF pval = 0 THEN
+SIGNAL SQLSTATE '01000';
+ELSEIF pval = 1 THEN
+ SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT = 'An error occurred';
+ ELSEIF pval = 2 THEN
+SIGNAL specialty
+ SET MESSAGE_TEXT = 'An error occurred';
+ELSE
+  SIGNAL SQLSTATE '01000'
+SET MESSAGE_TEXT = 'A warning occurred', MYSQL_ERRNO = 1000;
+SIGNAL SQLSTATE '45000'
+ SET MESSAGE_TEXT = 'An error occurred', MYSQL_ERRNO = 1001;
+  END IF;
+END//
+delimiter ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
